@@ -1,11 +1,20 @@
 var OBJECTIDS = {};
+var FRIENDS = {};
+var ALLROOMS = {};
+var ROOM;
 
 $(document).ready(function (){
   app.init();
   setInterval(app.fetch, 500);
 
-  $(this).on('change', '#roomselect', function() {
-    getMessages(this.value);
+  $('#roomSelect').on('change', function() {
+    if (this.value === 'new room') {
+      var newRoom = prompt('What is the name of the new room?');
+      app.renderRoom(newRoom);
+      $('#roomSelect').val(newRoom);
+    }
+    ROOM = this.value;
+    app.init();
   });
 
   $(this).on('click', '.username', function() {
@@ -17,6 +26,13 @@ $(document).ready(function (){
     app.handleSubmit($('input').val());
     $('input').val('')
   })
+
+  $(this).on('click', '.username', function () {
+    var name = $(this).text();
+    app.handleUsernameClick(name);
+    FRIENDS[name] = name;
+  });
+
 });
 
 var app = {
@@ -26,6 +42,7 @@ var app = {
 app.server = 'http://parse.sfm8.hackreactor.com/chatterbox/classes/messages/';
 
 app.init = function() {
+  $('#chats').empty();
   $.ajax({
     url: app.server,
     type: 'GET',
@@ -33,9 +50,13 @@ app.init = function() {
     contentType: 'application/json',
     success: function (data) {
       data.results.forEach(function(element) {
-        app.renderMessage(element);
-        OBJECTIDS[element.objectId] = element.objectId;
-        console.log(element)
+        if (element.roomname === ROOM) {
+          app.renderMessage(element);
+          OBJECTIDS[element.objectId] = element.objectId;
+        }
+        if (!(element.roomname in ALLROOMS)) {
+          ALLROOMS[element.roomname] = element.roomname;
+        }
       });
     },
     error: function (data) {
@@ -67,9 +88,12 @@ app.fetch = function() {
     contentType: 'application/json',
     success: function (data) {
       data.results.forEach(function(element) {
-        if ((element.objectId in OBJECTIDS) !== true) {
+        if (element.roomname === ROOM && (element.objectId in OBJECTIDS) !== true) {
           app.renderMessage(element, 'fetchReverse');
           OBJECTIDS[element.objectId] = element.objectId;
+        }
+        if (!(element.roomname in ALLROOMS)) {
+          ALLROOMS[element.roomname] = element.roomname;
         }
       });
     },
@@ -77,22 +101,29 @@ app.fetch = function() {
       console.error('chatterbox: Failed to send message', data);
     }
   });
+
+  app.updateRoomSelection();
 };
 
 app.clearMessages = function() {
   $('#chats').empty();
 }
 
-app.renderMessage = function(message, onFect) {
+app.renderMessage = function(message, onFetch) {
   var $user = $('<div class="username"></div>');
   var $msg = $('<div></div>');
   var $chat = $('<div class="chat"></div>');
   $user.text(message.username);
+
+  if (message.username in FRIENDS) {
+    $user.addClass("friend");
+  }
+
   $msg.text(escapeRegExp(message.text));
   $chat.append($user);
   $chat.append($msg);
 
-  if (onFect !== undefined) {
+  if (onFetch !== undefined) {
     $('#chats').prepend($chat);
   } else {
     $('#chats').append($chat);
@@ -105,8 +136,12 @@ app.renderRoom = function(name) {
   $('#roomSelect').append($room);
 }
 
-app.handleUsernameClick = function() {
-
+app.handleUsernameClick = function(name) {
+  $('.username').each(function(index, value) {
+    if ($(value).text() === name) {
+      $(value).addClass("friend");
+    }
+  });
 }
 
 app.handleSubmit = function(userMessage) {
@@ -114,9 +149,28 @@ app.handleSubmit = function(userMessage) {
   app.send({
     username: user,
     text: userMessage,
-    roomname: 'lobby'
+    roomname: ROOM
   });
 }
+
+app.updateRoomSelection = function() {
+  var currentRooms = [];
+
+  console.log(ALLROOMS);
+  $('#roomSelect').children().each(function(i, val) {
+    currentRooms.push($(val).val());
+  });
+
+  for (var prop in ALLROOMS) {
+
+    if (!(currentRooms.includes(ALLROOMS[prop])) && ALLROOMS[prop]) {
+      var $newRoom = $('<option value="' + prop + '">' + prop + '</option>');
+      $('#roomSelect').append($newRoom);
+    }
+  }
+
+}
+
 
 function escapeRegExp(str) {
   if (str === undefined) {
@@ -140,24 +194,16 @@ var parseQueryString = function() {
 
 var audio = new Audio('tone.mp3');
 
-// Write a message:
-// var message = {
-//   username: 'Charles',
-//   text: 'Cheap lunch?',
-//   roomname: 'lobby'
-// };
-
-
 // Deleter 
 function deleter () {
   var messages = [];
-  app.server = 'http://parse.sfm8.hackreactor.com/chatterbox/classes/messages/';
+  app.server2 = 'http://parse.sfm8.hackreactor.com/chatterbox/classes/messages';
 
   var fetch = function() {
     $.ajax({
-      url: app.server,
+      url: app.server2,
       type: 'GET',
-      data: {order: '-createdAt'},
+      data: {order: '-createdAt', limit: 1000},
       contentType: 'application/json',
       success: function (data) {
         data.results.forEach(function(element) {
@@ -174,7 +220,7 @@ function deleter () {
 
   var deleteDB = function(contentKey) {
     $.ajax({
-        url: app.server + contentKey,
+        url: app.server2 + contentKey,
         type: 'DELETE',
         success: function(){console.log('Deleted')},
         error: function(){console.log('Failed')}
