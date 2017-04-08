@@ -33,13 +33,14 @@ $(document).ready(function (){
     FRIENDS[name] = name;
   });
 
-  // placeholder for deleteUserMsgs
-  $(this).on('click', '.username', function () {
-    var name = $(this).text();
+  $(this).on('click', '.delete', function () {
+    var name = $(this).closest('.chat').find('.username').text();
+    console.log(name)
     app.deleteUserMsgs(name);
-    
-  });  
-
+    setTimeout(app.init, 500);
+    setTimeout(function() {
+      OBJECTIDS = {};}, 500);
+    });  
 });
 
 var app = {
@@ -118,8 +119,8 @@ app.clearMessages = function() {
 
 app.renderMessage = function(message, onFetch) {
   var $user = $('<div class="username"></div>');
-  var $deleteButton = 
-  var $msg = $('<div></div>');
+  var $deleteButton = $('<button class="delete">Kill User</button>');
+  var $msg = $('<div class="msg"></div>');
   var $chat = $('<div class="chat"></div>');
   $user.text(message.username);
 
@@ -129,6 +130,7 @@ app.renderMessage = function(message, onFetch) {
 
   $msg.text(escapeRegExp(message.text));
   $chat.append($user);
+  $chat.append($deleteButton);
   $chat.append($msg);
 
   if (onFetch !== undefined) {
@@ -145,13 +147,11 @@ app.renderRoom = function(name) {
 }
 
 app.handleUsernameClick = function(name) {
-  // $('.username').each(function(index, value) {
-  //   if ($(value).text() === name) {
-  //     $(value).addClass("friend");
-  //   }
-  // });
-  
-
+  $('.username').each(function(index, value) {
+    if ($(value).text() === name) {
+      $(value).addClass("friend");
+    }
+  });
 }
 
 app.handleSubmit = function(userMessage) {
@@ -170,6 +170,8 @@ app.updateRoomSelection = function() {
     currentRooms.push($(val).val());
   });
 
+  currentRooms.sort();
+
   for (var prop in ALLROOMS) {
 
     if (!(currentRooms.includes(ALLROOMS[prop])) && ALLROOMS[prop]) {
@@ -187,7 +189,7 @@ app.deleteUserMsgs = function(name) {
     messages.forEach(function(objID) {
     deleteDB(objID);
     })
-  }, 1000);
+  }, 200);
 
   function fetch() {
     $.ajax({
