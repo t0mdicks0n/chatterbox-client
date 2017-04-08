@@ -18,7 +18,7 @@ $(document).ready(function (){
   });
 
   $(this).on('click', '.username', function() {
-    app.handleUsernameClick(); 
+    app.handleUsernameClick($(this).val()); 
   })
 
   $(this).on('submit', '#chatbox', function(event) {
@@ -32,6 +32,13 @@ $(document).ready(function (){
     app.handleUsernameClick(name);
     FRIENDS[name] = name;
   });
+
+  // placeholder for deleteUserMsgs
+  $(this).on('click', '.username', function () {
+    var name = $(this).text();
+    app.deleteUserMsgs(name);
+    
+  });  
 
 });
 
@@ -111,6 +118,7 @@ app.clearMessages = function() {
 
 app.renderMessage = function(message, onFetch) {
   var $user = $('<div class="username"></div>');
+  var $deleteButton = 
   var $msg = $('<div></div>');
   var $chat = $('<div class="chat"></div>');
   $user.text(message.username);
@@ -137,11 +145,13 @@ app.renderRoom = function(name) {
 }
 
 app.handleUsernameClick = function(name) {
-  $('.username').each(function(index, value) {
-    if ($(value).text() === name) {
-      $(value).addClass("friend");
-    }
-  });
+  // $('.username').each(function(index, value) {
+  //   if ($(value).text() === name) {
+  //     $(value).addClass("friend");
+  //   }
+  // });
+  
+
 }
 
 app.handleSubmit = function(userMessage) {
@@ -156,7 +166,6 @@ app.handleSubmit = function(userMessage) {
 app.updateRoomSelection = function() {
   var currentRooms = [];
 
-  console.log(ALLROOMS);
   $('#roomSelect').children().each(function(i, val) {
     currentRooms.push($(val).val());
   });
@@ -165,10 +174,48 @@ app.updateRoomSelection = function() {
 
     if (!(currentRooms.includes(ALLROOMS[prop])) && ALLROOMS[prop]) {
       var $newRoom = $('<option value="' + prop + '">' + prop + '</option>');
-      $('#roomSelect').append($newRoom);
+      $('#roomSelect').prepend($newRoom);
     }
   }
+}
 
+app.deleteUserMsgs = function(name) {
+  var messages = [];
+  fetch();
+
+  setTimeout(function() {
+    messages.forEach(function(objID) {
+    deleteDB(objID);
+    })
+  }, 1000);
+
+  function fetch() {
+    $.ajax({
+      url: app.server,
+      type: 'GET',
+      data: {order: '-createdAt', limit: 100},
+      contentType: 'application/json',
+      success: function (data) {
+        data.results.forEach(function(element) {
+          if (element.username === name || element.username === undefined) {
+            messages.push(element.objectId);
+          }
+        });
+      },
+      error: function (data) {
+        console.error('chatterbox: Failed to send message', data);
+      }
+    });
+  };
+
+  function deleteDB(contentKey) {
+    $.ajax({
+        url: app.server + contentKey,
+        type: 'DELETE',
+        success: function(){console.log('Deleted')},
+        error: function(){console.log('Failed')}
+    });
+  }
 }
 
 
