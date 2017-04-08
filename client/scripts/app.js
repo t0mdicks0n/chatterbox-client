@@ -2,7 +2,7 @@ var OBJECTIDS = {};
 
 $(document).ready(function (){
   app.init();
-  setInterval(app.fetch, 1000);
+  setInterval(app.fetch, 500);
 
   $(this).on('change', '#roomselect', function() {
     getMessages(this.value);
@@ -23,13 +23,24 @@ var app = {
 
 };
 
-app.server = 'http://parse.sfm8.hackreactor.com/chatterbox/classes/lobby';
+app.server = 'http://parse.sfm8.hackreactor.com/chatterbox/classes/messages/';
 
 app.init = function() {
-  $.get(app.server, function( data ) {
-    data.results.forEach(function(element) {
-      app.renderMessage(element);
-    });
+  $.ajax({
+    url: app.server,
+    type: 'GET',
+    data: {order: '-createdAt'},
+    contentType: 'application/json',
+    success: function (data) {
+      data.results.forEach(function(element) {
+        app.renderMessage(element);
+        OBJECTIDS[element.objectId] = element.objectId;
+        console.log(element)
+      });
+    },
+    error: function (data) {
+      console.error('chatterbox: Failed to send message', data);
+    }
   });
 };
 
@@ -49,13 +60,22 @@ app.send = function(message) {
 };
 
 app.fetch = function() {
-  $.get(app.server, function( data ) {
-    data.results.forEach(function(element) {
-      if ((element.objectId in OBJECTIDS) !== true) {
-        app.renderMessage(element);
-        OBJECTIDS[element.objectId] = element.objectId;
-      }
-    });
+  $.ajax({
+    url: app.server,
+    type: 'GET',
+    data: {order: '-createdAt'},
+    contentType: 'application/json',
+    success: function (data) {
+      data.results.forEach(function(element) {
+        if ((element.objectId in OBJECTIDS) !== true) {
+          app.renderMessage(element, 'fetchReverse');
+          OBJECTIDS[element.objectId] = element.objectId;
+        }
+      });
+    },
+    error: function (data) {
+      console.error('chatterbox: Failed to send message', data);
+    }
   });
 };
 
@@ -63,7 +83,7 @@ app.clearMessages = function() {
   $('#chats').empty();
 }
 
-app.renderMessage = function(message) {
+app.renderMessage = function(message, onFect) {
   var $user = $('<div class="username"></div>');
   var $msg = $('<div></div>');
   var $chat = $('<div class="chat"></div>');
@@ -71,7 +91,13 @@ app.renderMessage = function(message) {
   $msg.text(escapeRegExp(message.text));
   $chat.append($user);
   $chat.append($msg);
-  $('#chats').prepend($chat);
+
+  if (onFect !== undefined) {
+    $('#chats').prepend($chat);
+  } else {
+    $('#chats').append($chat);
+  }
+  audio.play();
 } 
 
 app.renderRoom = function(name) {
@@ -112,9 +138,50 @@ var parseQueryString = function() {
   return objURL;
 };
 
+var audio = new Audio('tone.mp3');
+
 // Write a message:
 // var message = {
 //   username: 'Charles',
 //   text: 'Cheap lunch?',
 //   roomname: 'lobby'
 // };
+
+
+// Deleter 
+function deleter () {
+  var messages = [];
+  app.server = 'http://parse.sfm8.hackreactor.com/chatterbox/classes/messages/';
+
+  var fetch = function() {
+    $.ajax({
+      url: app.server,
+      type: 'GET',
+      data: {order: '-createdAt'},
+      contentType: 'application/json',
+      success: function (data) {
+        data.results.forEach(function(element) {
+          messages.push(element.objectId)
+        });
+      },
+      error: function (data) {
+        console.error('chatterbox: Failed to send message', data);
+      }
+    });
+  };
+
+  fetch();
+
+  var deleteDB = function(contentKey) {
+    $.ajax({
+        url: app.server + contentKey,
+        type: 'DELETE',
+        success: function(){console.log('Deleted')},
+        error: function(){console.log('Failed')}
+    });
+  }
+
+  messages.forEach(function(objID) {
+    deleteDB(objID);
+  });
+}
