@@ -1,5 +1,8 @@
+var OBJECTIDS = {};
+
 $(document).ready(function (){
-  app.fetch();
+  app.init();
+  setInterval(app.fetch, 1000);
 
   $(this).on('change', '#roomselect', function() {
     getMessages(this.value);
@@ -9,8 +12,10 @@ $(document).ready(function (){
     app.handleUsernameClick(); 
   })
 
-  $(this).on('submit', '.submit', function() {
-    app.handleSubmit(); 
+  $(this).on('submit', '#chatbox', function(event) {
+    event.preventDefault();
+    app.handleSubmit($('input').val());
+    $('input').val('')
   })
 });
 
@@ -18,16 +23,19 @@ var app = {
 
 };
 
-app.server = 'http://parse.sfm8.hackreactor.com/chatterbox/classes/messages';
+app.server = 'http://parse.sfm8.hackreactor.com/chatterbox/classes/lobby';
 
 app.init = function() {
-
+  $.get(app.server, function( data ) {
+    data.results.forEach(function(element) {
+      app.renderMessage(element);
+    });
+  });
 };
 
 app.send = function(message) {
   $.ajax({
-    // This is the url you should use to communicate with the parse API server.
-    url: app.server + message.roomname,
+    url: app.server,
     type: 'POST',
     data: JSON.stringify(message),
     contentType: 'application/json',
@@ -43,7 +51,10 @@ app.send = function(message) {
 app.fetch = function() {
   $.get(app.server, function( data ) {
     data.results.forEach(function(element) {
-      app.renderMessage(element);
+      if ((element.objectId in OBJECTIDS) !== true) {
+        app.renderMessage(element);
+        OBJECTIDS[element.objectId] = element.objectId;
+      }
     });
   });
 };
@@ -72,8 +83,13 @@ app.handleUsernameClick = function() {
 
 }
 
-app.handleSubmit = function() {
-
+app.handleSubmit = function(userMessage) {
+  var user = parseQueryString(window.location.search).username;
+  app.send({
+    username: user,
+    text: userMessage,
+    roomname: 'lobby'
+  });
 }
 
 function escapeRegExp(str) {
@@ -83,6 +99,18 @@ function escapeRegExp(str) {
     return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "");
   }
 }
+
+var parseQueryString = function() {
+  var str = window.location.search;
+  var objURL = {};
+  str.replace(
+      new RegExp( "([^?=&]+)(=([^&]*))?", "g" ),
+      function( $0, $1, $2, $3 ){
+          objURL[ $1 ] = $3;
+      }
+  );
+  return objURL;
+};
 
 // Write a message:
 // var message = {
