@@ -96,6 +96,7 @@ app.fetch = function() {
     // data: {order: '-createdAt'},
     contentType: 'application/json',
     success: function (data) {
+      console.log(data)
       JSON.parse(data).results.forEach(function(element) {
         if (element.roomname === ROOM && (element.objectId in OBJECTIDS) !== true) {
           app.renderMessage(element, 'fetchReverse');
