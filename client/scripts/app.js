@@ -47,17 +47,18 @@ var app = {
 
 };
 
-app.server = 'http://parse.sfm8.hackreactor.com/chatterbox/classes/messages/';
+app.server = 'http://127.0.0.1:3000/classes/messages';
 
 app.init = function() {
   $('#chats').empty();
   $.ajax({
     url: app.server,
     type: 'GET',
-    data: {order: '-createdAt'},
+    // data: {order: '-createdAt'},
     contentType: 'application/json',
     success: function (data) {
-      data.results.forEach(function(element) {
+
+      JSON.parse(data).results.forEach(function(element) {
         if (element.roomname === ROOM) {
           app.renderMessage(element);
           OBJECTIDS[element.objectId] = element.objectId;
@@ -92,10 +93,10 @@ app.fetch = function() {
   $.ajax({
     url: app.server,
     type: 'GET',
-    data: {order: '-createdAt'},
+    // data: {order: '-createdAt'},
     contentType: 'application/json',
     success: function (data) {
-      data.results.forEach(function(element) {
+      JSON.parse(data).results.forEach(function(element) {
         if (element.roomname === ROOM && (element.objectId in OBJECTIDS) !== true) {
           app.renderMessage(element, 'fetchReverse');
           OBJECTIDS[element.objectId] = element.objectId;
@@ -195,7 +196,7 @@ app.deleteUserMsgs = function(name) {
     $.ajax({
       url: app.server,
       type: 'GET',
-      data: {order: '-createdAt', limit: 100},
+      // data: {order: '-createdAt', limit: 100},
       contentType: 'application/json',
       success: function (data) {
         data.results.forEach(function(element) {
@@ -252,7 +253,7 @@ function deleter () {
     $.ajax({
       url: app.server2,
       type: 'GET',
-      data: {order: '-createdAt', limit: 1000},
+      // data: {order: '-createdAt', limit: 1000},
       contentType: 'application/json',
       success: function (data) {
         data.results.forEach(function(element) {
